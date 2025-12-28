@@ -4,10 +4,13 @@
 
 ## 功能
 
-- ✅ 批量转换整个文件夹的 PDF
+- ✅ 支持单文件和批量文件夹转换
 - ✅ 自动识别并删除 References / 参考文献 / Bibliography
+- ✅ **智能保留附录、致谢等参考文献后的章节**
+- ✅ 支持递归处理子文件夹
+- ✅ 可指定输出目录
+- ✅ 多进程并行加速
 - ✅ 跨平台支持 (macOS / Linux / Windows)
-- ✅ 适用于原生数字 PDF（可选中文字的 PDF）
 
 ## 安装
 
@@ -37,31 +40,61 @@ pip install pymupdf4llm
 
 ## 使用方法
 
+### 基本用法
+
 ```bash
-python pdf2md.py <PDF文件夹路径>
+# 转换单个文件
+python pdf2md.py paper.pdf
+
+# 转换整个文件夹
+python pdf2md.py ./papers
+```
+
+### 完整选项
+
+```bash
+python pdf2md.py <输入路径> [选项]
+
+选项:
+  -o, --output DIR      指定输出目录（默认：与输入同目录）
+  -r, --recursive       递归处理子文件夹
+  --keep-refs           保留参考文献（不删除）
+  --dry-run             预览模式，不实际转换
+  -v, --verbose         显示详细信息（文件大小、耗时等）
+  -w, --workers N       并行进程数（默认：4）
 ```
 
 ### 示例
 
 ```bash
-# macOS / Linux
-python3 pdf2md.py ./papers
-python3 pdf2md.py ~/Documents/论文
+# 转换文件夹，输出到指定目录
+python pdf2md.py ./papers -o ./markdown_output
 
-# Windows
-python pdf2md.py .\papers
-python pdf2md.py C:\Users\你的用户名\Documents\论文
+# 递归处理所有子文件夹
+python pdf2md.py ./research -r
+
+# 保留参考文献
+python pdf2md.py ./papers --keep-refs
+
+# 预览将处理的文件（不实际转换）
+python pdf2md.py ./papers --dry-run
+
+# 使用 8 个进程并行处理
+python pdf2md.py ./papers -w 8
+
+# 组合使用
+python pdf2md.py ./papers -o ./output -r -v -w 4
 ```
 
 ### 输出
 
-转换后的 `.md` 文件保存在原 PDF 文件夹中：
-
 ```
 papers/
-├── paper1.pdf  →  paper1.md
-├── paper2.pdf  →  paper2.md
-└── paper3.pdf  →  paper3.md
+├── subdir/
+│   ├── paper3.pdf  →  output/paper3.md
+│   └── paper4.pdf  →  output/paper4.md
+├── paper1.pdf      →  output/paper1.md
+└── paper2.pdf      →  output/paper2.md
 ```
 
 ## 原理
@@ -75,9 +108,51 @@ papers/
 
 > ⚠️ 如果是扫描件 PDF（无法选中文字），此工具不适用，需要 OCR 工具如 marker-pdf。
 
-## 自定义参考文献标题
+## 智能章节处理
 
-如果你的论文使用特殊的参考文献标题格式，编辑 `pdf2md.py` 中的 `REFERENCE_PATTERNS` 列表添加新的匹配模式。
+工具会自动识别并保留参考文献之后的重要章节：
+
+- **Appendix / 附录**
+- **Acknowledgments / 致谢**
+- **Supplementary Materials / 补充材料**
+- **Author Contributions**
+- **Data/Code Availability**
+- **Funding / Ethics**
+
+## 自定义配置
+
+### 添加参考文献匹配模式
+
+编辑 `pdf2md.py` 中的 `REFERENCE_PATTERNS` 列表：
+
+```python
+REFERENCE_PATTERNS = [
+    r'^#{1,6}\s*References?\s*$',
+    r'^Your Custom Pattern$',  # 添加新模式
+    ...
+]
+```
+
+### 添加需保留的章节
+
+编辑 `PRESERVE_PATTERNS` 列表：
+
+```python
+PRESERVE_PATTERNS = [
+    r'^#{1,6}\s*Appendi(?:x|ces)',
+    r'^#{1,6}\s*Your Section$',  # 添加新章节
+    ...
+]
+```
+
+## 性能
+
+| 文件数量 | 单进程 | 4 进程 (-w 4) |
+|---------|--------|--------------|
+| 10 篇论文 | ~30s | ~10s |
+| 50 篇论文 | ~150s | ~40s |
+
+> 实际速度取决于 PDF 大小和系统性能
 
 ## License
 
